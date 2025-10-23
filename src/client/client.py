@@ -11,6 +11,7 @@ def start_client():
             # Recieve Data from Server
             data = client_socket.recv(4096).decode()
             if not data:
+                print("Server Disconnected")
                 break
             print(data, end='')
 
