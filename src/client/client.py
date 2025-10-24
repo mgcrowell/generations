@@ -1,7 +1,7 @@
 #the simpilest client money can buy
 import socket
 
-def start_client():
+def start_client(ip, port):
     client_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
     try:
@@ -25,5 +25,13 @@ def start_client():
     finally:
         client_socket.close()
 if __name__ == "__main__":
+    string = input("Enter IP:PORT(Press Enter for Default): ")
+    if string == '':
+        ip = 'localhost'
+        port = 8888
+    else:
+        ip_full = string.split(':')
+        ip = ip_full[0]
+        port = ip_full[1]
     print("Connecting to Server...")
-    start_client()
+    start_client(ip, port)
