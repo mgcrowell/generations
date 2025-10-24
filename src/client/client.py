@@ -45,7 +45,6 @@ def start_client(ip, port):
                 if user_input in ['w','a','s','d']:
                     command = movement_commands[user_input]
                 elif user_input.upper() == "POSITIONS":
-                    client_socket.send("POSITIONS\n".encode())  # Send command first
                     receive_positions(client_socket) 
                 else:
                     command = user_input
@@ -58,15 +57,23 @@ def start_client(ip, port):
 
 def receive_positions(client_socket):
     clear_terminal()
-    data = client_socket.recv(4096).decode()  # Receive larger buffer for JSON
+    client_socket.send('POSITIONS'.encode())
     try:
+        data = client_socket.recv(4096).decode()
         positions = json.loads(data)
-        print("Received positions:")
+        
+        print("=== CURRENT POSITIONS ===")
         for entity in positions:
-            print(f"  {entity['type']}: {entity['name']} at ({entity['x']}, {entity['y']})")
-        input("Press enter to go back.")
+            print(f"  {entity['type'].title()}: {entity['name']} at ({entity['x']}, {entity['y']})")
+        
+        input("\nPress Enter to go back.")
+        clear_terminal()
+        
+        # DON'T receive again - the player info will come on the next loop iteration
+        
     except json.JSONDecodeError:
         print("Raw response:", data)
+        input("\nPress Enter to go back.")
 
 """Starting the Server Here"""
 if __name__ == "__main__":

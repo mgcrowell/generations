@@ -1,6 +1,23 @@
 import socket
 import json
 import random
+"""Generations Server Testing"""
+
+# ===== PROTOCOL DEFINITION =====
+# 
+# MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
+#
+# COMMAND TYPES:
+# - PLAYER_INFO: "PLAYER_INFO:player_data_json"
+# - POSITIONS: "POSITIONS:positions_json" 
+# - ERROR: "ERROR:error_message"
+# - SUCCESS: "SUCCESS:message"
+# - PROMPT: "PROMPT:prompt_text"
+#
+# CLIENT -> SERVER: plain commands like "MOVE north", "ATTACK", "POSITIONS"
+# SERVER -> CLIENT: always uses PROTOCOL_FORMAT
+#
+# ===============================
 
 class GameState:
     def __init__(self):
@@ -229,9 +246,9 @@ class GameServer:
                     client_socket.send(b"This command isn't functional\n")
                 elif command == 'POSITIONS':
                     result = self.game_state.get_all_positions()
-                    # Pretty JSON for readability
-                    json_data = json.dumps(result, indent=2)
+                    json_data = json.dumps(result)
                     client_socket.send(json_data.encode())
+                    client_socket.send(b"Got positions\n")
                 else:
                     client_socket.send(b"Unknown command. Use arrows to move, 'attack' to fight\n")
                     
@@ -240,8 +257,15 @@ class GameServer:
         finally:
             client_socket.close()
             if player_id and player_id in self.game_state.players:
-                del self.game_state.players[player_id]
-                print(f"Player {player_id} disconnected")
+                try:
+                    self.game_state.remove_player(player_id)
+                    print(f"Player {player_id} disconnected")
+                    slots = self.game_state.get_available_slots()
+                    print(f"Available slots: {slots}")
+                except KeyError:
+                    print(f"Player {player_id} was already removed")
+                except Exception as e:
+                    print(f"Error during player removal: {e}")
 
 if __name__ == "__main__":
     server = GameServer()
