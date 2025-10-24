@@ -5,7 +5,7 @@ import random
 class GameState:
     def __init__(self):
         self.players = {}  # {player_id: {"name": "Ari", "x": 0, "y": 0, "health": 100}}
-        self.enemies = [{"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 50}]
+        self.enemies = [{"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 20}]
         self.next_player_id = 1
     
     def add_player(self, name):
@@ -42,6 +42,15 @@ class GameState:
         player["x"] = new_x
         player["y"] = new_y
         return {"type": "MOVED", "x": new_x, "y": new_y}
+    
+    def get_all_positions(self):
+        players = self.players
+        enemies = self.enemies
+        for enemy in enemies:
+            enemy_position = {"id":enemies["id"],"x":enemies["x"],"y":enemies["y"]}
+            
+        for player in players:
+            player_position += {"id":players["id"]}
     
     def attack_enemy(self, player_id):
         player = self.players[player_id]
