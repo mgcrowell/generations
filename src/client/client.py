@@ -1,13 +1,30 @@
 #the simpilest client money can buy
 import socket
+import os
+
+def clear_terminal():
+    """Clears the terminal screen based on the operating system."""
+    # For Windows
+    if os.name == 'nt':
+        _ = os.system('cls')
+    # For macOS and Linux
+    else:
+        _ = os.system('clear')
 
 def start_client():
     client_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    movement_commands = {
+                    'w':'MOVE_UP',
+                    's':'MOVE_DOWN', 
+                    'a':'MOVE_LEFT',
+                    'd':'MOVE_RIGHT'
+                }    
 
     try:
         client_socket.connect(('localhost',8888))
 
         while True:
+            clear_terminal()
             # Recieve Data from Server
             data = client_socket.recv(4096).decode()
             if not data:
@@ -18,7 +35,11 @@ def start_client():
             #Provide input on server ask
             if '>' in data or ':' in data or '?' in data:
                 user_input = input()
-                client_socket.send(f"{user_input}\n".encode())
+                if user_input in ['w','a','s','d']:
+                    command = movement_commands[user_input]
+                else:
+                    command = user_input
+                client_socket.send(f"{command}\n".encode())
 
     except Exception as e:
         print(f"Connection error: {e}")

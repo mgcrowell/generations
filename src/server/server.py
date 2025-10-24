@@ -5,8 +5,9 @@ import random
 class GameState:
     def __init__(self):
         self.players = {}  # {player_id: {"name": "Ari", "x": 0, "y": 0, "health": 100}}
-        self.enemies = [{"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 50}]
+        self.enemies = [{"id": 1, "name": "Demon", "x": 0, "y": 0, "health": 50}]
         self.next_player_id = 1
+        self.battle = 0
     
     def add_player(self, name):
         player_id = self.next_player_id
@@ -25,20 +26,25 @@ class GameState:
         return 404
     
     def move_player(self, player_id, direction):
+        #print(f"Moving Player {direction}".encode())
         player = self.players[player_id]
         dx, dy = 0, 0
-        if direction == "w": dy = -1
-        elif direction == "s": dy = 1
-        elif direction == "a": dx = -1
-        elif direction == "d": dx = 1
+        if direction == "UP": dy = -1
+        elif direction == "DOWN": dy = 1
+        elif direction == "LEFT": dx = -1
+        elif direction == "RIGHT": dx = 1
         new_x, new_y = player["x"] + dx, player["y"] + dy
         
         # Check for enemies at new position
         for enemy in self.enemies:
             if enemy["x"] == new_x and enemy["y"] == new_y:
+                #Move to encounter!
+                self.battle = 0
+                player["x"] = new_x
+                player["y"] = new_y
                 return {"type": "ENCOUNTER", "enemy": enemy["name"]}
             
-        # Complete the Move
+        # Normal Move
         player["x"] = new_x
         player["y"] = new_y
         return {"type": "MOVED", "x": new_x, "y": new_y}
@@ -110,7 +116,7 @@ class GameServer:
                 # Check for enemies near
                 for enemy in self.game_state.enemies:
                     dist = abs(player['x'] - enemy['x']) + abs(player['y'] - enemy['y'])
-                    if dist <= 2:
+                    if dist <= 2 and self.game_state.battle == 0:
                         status += f"You sense a {enemy['name']} nearby...\n"
                 
                 status += "\nWhat to do now...? > "
@@ -121,25 +127,33 @@ class GameServer:
                 if not data:
                     break
                 
-                command = data.decode().strip().lower()
+                command = data.decode().strip().upper()
+                # Movement command mapping
+                movement_commands = {
+                    'MOVE_UP': 'UP',
+                    'MOVE_DOWN': 'DOWN', 
+                    'MOVE_LEFT': 'LEFT',
+                    'MOVE_RIGHT': 'RIGHT'
+                }
                 print(command)
-                
-                if command == 'quit':
+
+                if command == 'QUIT':
                     client_socket.send(b"Exiting\n")
                     break
-                elif command in ['w', 'a', 's', 'd']:
-                    result = self.game_state.move_player(player_id, command)
+                elif command in movement_commands:
+                    direction = movement_commands[command]
+                    result = self.game_state.move_player(player_id, direction)
                     if result["type"] == "ENCOUNTER":
                         client_socket.send(f"\n*** You are entering battle with {result['enemy']}! ***\n".encode())
                     else:
                         client_socket.send(f"Moved to ({result['x']}, {result['y']})\n".encode())
-                elif command == 'attack':
+                elif command == 'ATTACK':
                     result = self.game_state.attack_enemy(player_id)
                     client_socket.send(f"*** BATTLE: {result['message']} ***\n".encode())
-                elif command == 'add enemy':
-                    client_socket.send(b"This command isn't functional\n".encode())
+                elif command == 'ADD ENEMY':
+                    client_socket.send(b"This command isn't functional\n")
                 else:
-                    client_socket.send(b"Unknown command. Use WASD to move, 'attack' to fight\n".encode())
+                    client_socket.send(b"Unknown command. Use arrows to move, 'attack' to fight\n")
                     
         except Exception as e:
             print(f"Client error: {e}")
