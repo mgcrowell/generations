@@ -1,8 +1,9 @@
 import socket
 import json
 import random
-"""Generations Server Testing"""
+import threading
 
+"""Generations Server Testing - Now With Threading!"""
 # ===== PROTOCOL DEFINITION =====
 # 
 # MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
@@ -26,129 +27,139 @@ class GameState:
         self.available_slots = ['1','2','3','4']
         self.slot_to_player = {}
         self.battle = 0
-    
+        self.lock = threading.Lock()  # Add thread lock for thread safety
+
     def add_player(self, name):
-        if not self.available_slots:
-            print("No open slots!")
-            return None
-        slot = self.available_slots.pop(0)
-        player_id = random.randint(0,256)
-        print(f"Keep this safe! This is your unique player id!\nPlayer ID: {player_id}\n")
-        
-        self.players[player_id] = {
-            "id": player_id,
-            "name": name,
-            "slot": slot,
-            "y": 0,
-            "x": 0,
-            "health": 100,
-            "max_health": 100
-        }
-        self.slot_to_player[slot] = player_id
-        return player_id
+        with self.lock:  # Thread-safe access
+            if not self.available_slots:
+                print("No open slots!")
+                return None
+            slot = self.available_slots.pop(0)
+            player_id = random.randint(0,256)
+            print(f"Keep this safe! This is your unique player id!\nPlayer ID: {player_id}\n")
+            
+            self.players[player_id] = {
+                "id": player_id,
+                "name": name,
+                "slot": slot,
+                "y": 0,
+                "x": 0,
+                "health": 100,
+                "max_health": 100
+            }
+            self.slot_to_player[slot] = player_id
+            return player_id
+
     def remove_player(self, player_id):
         """Remove a player and free up their slot"""
-        if player_id in self.players:
-            slot = self.players[player_id]["slot"]
-            
-            # Free up the slot
-            self.available_slots.append(slot)
-            self.available_slots.sort()  # Keep slots in order
-            
-            # Remove from tracking
-            if slot in self.slot_to_player:
-                del self.slot_to_player[slot]
-            
-            # Remove player data
-            del self.players[player_id]
-            
-            print(f"Player removed from slot {slot}")
+        with self.lock:  # Thread-safe access
+            if player_id in self.players:
+                slot = self.players[player_id]["slot"]
+                
+                # Free up the slot
+                self.available_slots.append(slot)
+                self.available_slots.sort()  # Keep slots in order
+                
+                # Remove from tracking
+                if slot in self.slot_to_player:
+                    del self.slot_to_player[slot]
+                
+                # Remove player data
+                del self.players[player_id]
+                
+                print(f"Player removed from slot {slot}")
+
     def get_available_slots(self):
         """Return list of available slots"""
-        return self.available_slots.copy()
+        with self.lock:
+            return self.available_slots.copy()
     
     def get_player_by_slot(self, slot):
         """Get player data by slot number"""
-        if slot in self.slot_to_player:
-            return self.players.get(self.slot_to_player[slot])
-        return None
+        with self.lock:
+            if slot in self.slot_to_player:
+                return self.players.get(self.slot_to_player[slot])
+            return None
     
     def add_enemies(self, id, x, y):
         # Nothing here yet!
         return 404
     
     def move_player(self, player_id, direction):
-        #print(f"Moving Player {direction}".encode())
-        player = self.players[player_id]
-        dx, dy = 0, 0
-        if direction == "UP": dy = 1
-        elif direction == "DOWN": dy = -1
-        elif direction == "LEFT": dx = -1
-        elif direction == "RIGHT": dx = 1
-        new_x, new_y = player["x"] + dx, player["y"] + dy
-        
-        # Check for enemies at new position
-        for enemy in self.enemies:
-            if enemy["x"] == new_x and enemy["y"] == new_y:
-                #Move to encounter!
-                self.battle = 0
-                player["x"] = new_x
-                player["y"] = new_y
-                return {"type": "ENCOUNTER", "enemy": enemy["name"]}
+        with self.lock:  # Thread-safe access
+            #print(f"Moving Player {direction}".encode())
+            player = self.players[player_id]
+            dx, dy = 0, 0
+            if direction == "UP": dy = 1
+            elif direction == "DOWN": dy = -1
+            elif direction == "LEFT": dx = -1
+            elif direction == "RIGHT": dx = 1
+            new_x, new_y = player["x"] + dx, player["y"] + dy
             
-        # Normal Move
-        player["x"] = new_x
-        player["y"] = new_y
-        return {"type": "MOVED", "x": new_x, "y": new_y}
+            # Check for enemies at new position
+            for enemy in self.enemies:
+                if enemy["x"] == new_x and enemy["y"] == new_y:
+                    #Move to encounter!
+                    self.battle = 0
+                    player["x"] = new_x
+                    player["y"] = new_y
+                    return {"type": "ENCOUNTER", "enemy": enemy["name"]}
+                
+            # Normal Move
+            player["x"] = new_x
+            player["y"] = new_y
+            return {"type": "MOVED", "x": new_x, "y": new_y}
     
     def get_all_positions(self):
-        # Get enemy positions
-        enemy_positions = [
-            {
-                "id": enemy["id"],
-                "name": enemy["name"], 
-                "x": enemy["x"],
-                "y": enemy["y"],
-                "type": "enemy"
-            }
-            for enemy in self.enemies
-        ]
-        
-        # Get player positions
-        player_positions = [
-            {
-                "id": player_data["id"],
-                "name": player_data["name"],
-                "x": player_data["x"],
-                "y": player_data["y"], 
-                "type": "player"
-            }
-            for player_data in self.players.values()
-        ]
-        
-        return enemy_positions + player_positions
+        with self.lock:  # Thread-safe access
+            # Get enemy positions
+            enemy_positions = [
+                {
+                    "id": enemy["id"],
+                    "name": enemy["name"], 
+                    "x": enemy["x"],
+                    "y": enemy["y"],
+                    "type": "enemy"
+                }
+                for enemy in self.enemies
+            ]
+            
+            # Get player positions
+            player_positions = [
+                {
+                    "id": player_data["id"],
+                    "name": player_data["name"],
+                    "x": player_data["x"],
+                    "y": player_data["y"], 
+                    "type": "player"
+                }
+                for player_data in self.players.values()
+            ]
+            
+            return enemy_positions + player_positions
     
     def attack_enemy(self, player_id):
-        player = self.players[player_id]
-        # Find enemy at player position
-        for enemy in self.enemies:
-            if enemy["x"] == player["x"] and enemy["y"] == player["y"]:
-                damage = random.randint(10, 20)
-                enemy["health"] -= damage
-                if enemy["health"] <= 0:
-                    self.enemies.remove(enemy)
-                    return {
-                        "type": "BATTLE_RESULT",
-                        "message": f"You have slain {enemy['name']}...",
-                        "enemy_defeated": True
-                    }
-                else:
-                    return {
-                        "type": "BATTLE_RESULT",
-                        "message": f"You hit {enemy['name']} for {damage} damage",
-                        "enemy_defeated": False
-                    }
-        return {"type": "ERROR", "message": "No enemy to attack?"}
+        with self.lock:  # Thread-safe access
+            player = self.players[player_id]
+            # Find enemy at player position
+            for enemy in self.enemies:
+                if enemy["x"] == player["x"] and enemy["y"] == player["y"]:
+                    damage = random.randint(10, 20)
+                    enemy["health"] -= damage
+                    if enemy["health"] <= 0:
+                        self.enemies.remove(enemy)
+                        return {
+                            "type": "BATTLE_RESULT",
+                            "message": f"You have slain {enemy['name']}...",
+                            "enemy_defeated": True
+                        }
+                    else:
+                        return {
+                            "type": "BATTLE_RESULT",
+                            "message": f"You hit {enemy['name']} for {damage} damage",
+                            "enemy_defeated": False
+                        }
+            return {"type": "ERROR", "message": "No enemy to attack?"}
 
 class GameServer:
     def __init__(self, host='localhost', port=8888):
@@ -162,30 +173,39 @@ class GameServer:
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((self.host, self.port))
         server_socket.listen(5)
-        print(f"Generations Server running on {self.host}:{self.port}")
+        print(f"Generations Server (Now with Threading!) running on {self.host}:{self.port}")
         print("Waiting for players to connect...")
         
         while True:
             client_socket, address = server_socket.accept()
             print(f"New connection from {address}")
-            # Handle the client
-            self.handle_client(client_socket)
+            
+            # Handle each client in a separate thread
+            client_thread = threading.Thread(
+                target=self.handle_client, 
+                args=(client_socket,)
+            )
+            client_thread.daemon = True  # Allow thread to exit when main program exits
+            client_thread.start()
+            print(f"Active threads: {threading.active_count() - 1}")  # Subtract main thread
     
-    def  handle_client(self, client_socket):
+    def handle_client(self, client_socket):
         prompt = "Are you operator?"
         client_socket.send(prompt.encode())
-        #Process reponsonse
+        # Process response
         response = client_socket.recv(1024).decode().strip().upper()
-        if response == 'yes':
+        if response == 'YES':
             self.handle_operator(client_socket)
         else:
             self.handle_player(client_socket)
 
     def handle_operator(self, client_socket):
-        random()
+        # Your operator logic here
+        client_socket.send(b"Operator mode not implemented yet\n")
+        client_socket.close()
 
     def handle_player(self, client_socket):
-        """Handle one client connection"""
+        """Handle one client connection in its own thread"""
         player_id = None
         try:
             # Get player name
@@ -195,6 +215,10 @@ class GameServer:
             
             # Add player to game
             player_id = self.game_state.add_player(player_name)
+            if player_id is None:
+                client_socket.send(b"Server is full! Try again later.\n")
+                return
+                
             client_socket.send(f"Hello {player_name}! Use WASD to move, 'attack' to fight, 'quit' to exit\n".encode())
             
             # Main game loop for this client
@@ -227,8 +251,8 @@ class GameServer:
                     'MOVE_LEFT': 'LEFT',
                     'MOVE_RIGHT': 'RIGHT'
                 }
-                print(command)
-
+                print(f"Player {player_id}: {command}")
+                
                 if command == 'QUIT':
                     client_socket.send(b"Exiting\n")
                     break
