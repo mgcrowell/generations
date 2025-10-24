@@ -4,22 +4,57 @@ import random
 
 class GameState:
     def __init__(self):
-        self.players = {}  # {player_id: {"name": "Ari", "x": 0, "y": 0, "health": 100}}
+        self.players = {}  # {slot:, id:, {"name": "Ari", "x": 0, "y": 0, "health": 100}}
         self.enemies = [{"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 20}]
-        self.next_player_id = 1
+        self.available_slots = ['1','2','3','4']
+        self.slot_to_player = {}
         self.battle = 0
     
     def add_player(self, name):
-        player_id = self.next_player_id
-        self.next_player_id += 1
+        if not self.available_slots:
+            print("No open slots!")
+            return None
+        slot = self.available_slots.pop(0)
+        player_id = random.randint(0,256)
+        print(f"Keep this safe! This is your unique player id!\nPlayer ID: {player_id}\n")
+        
         self.players[player_id] = {
+            "id": player_id,
             "name": name,
+            "slot": slot,
             "y": 0,
             "x": 0,
             "health": 100,
             "max_health": 100
         }
+        self.slot_to_player[slot] = player_id
         return player_id
+    def remove_player(self, player_id):
+        """Remove a player and free up their slot"""
+        if player_id in self.players:
+            slot = self.players[player_id]["slot"]
+            
+            # Free up the slot
+            self.available_slots.append(slot)
+            self.available_slots.sort()  # Keep slots in order
+            
+            # Remove from tracking
+            if slot in self.slot_to_player:
+                del self.slot_to_player[slot]
+            
+            # Remove player data
+            del self.players[player_id]
+            
+            print(f"Player removed from slot {slot}")
+    def get_available_slots(self):
+        """Return list of available slots"""
+        return self.available_slots.copy()
+    
+    def get_player_by_slot(self, slot):
+        """Get player data by slot number"""
+        if slot in self.slot_to_player:
+            return self.players.get(self.slot_to_player[slot])
+        return None
     
     def add_enemies(self, id, x, y):
         # Nothing here yet!
@@ -29,8 +64,8 @@ class GameState:
         #print(f"Moving Player {direction}".encode())
         player = self.players[player_id]
         dx, dy = 0, 0
-        if direction == "UP": dy = -1
-        elif direction == "DOWN": dy = 1
+        if direction == "UP": dy = 1
+        elif direction == "DOWN": dy = -1
         elif direction == "LEFT": dx = -1
         elif direction == "RIGHT": dx = 1
         new_x, new_y = player["x"] + dx, player["y"] + dy
@@ -50,13 +85,31 @@ class GameState:
         return {"type": "MOVED", "x": new_x, "y": new_y}
     
     def get_all_positions(self):
-        players = self.players
-        enemies = self.enemies
-        for enemy in enemies:
-            enemy_position = {"id":enemies["id"],"x":enemies["x"],"y":enemies["y"]}
-            
-        for player in players:
-            player_position += {"id":players["id"]}
+        # Get enemy positions
+        enemy_positions = [
+            {
+                "id": enemy["id"],
+                "name": enemy["name"], 
+                "x": enemy["x"],
+                "y": enemy["y"],
+                "type": "enemy"
+            }
+            for enemy in self.enemies
+        ]
+        
+        # Get player positions
+        player_positions = [
+            {
+                "id": player_data["id"],
+                "name": player_data["name"],
+                "x": player_data["x"],
+                "y": player_data["y"], 
+                "type": "player"
+            }
+            for player_data in self.players.values()
+        ]
+        
+        return enemy_positions + player_positions
     
     def attack_enemy(self, player_id):
         player = self.players[player_id]
@@ -100,8 +153,21 @@ class GameServer:
             print(f"New connection from {address}")
             # Handle the client
             self.handle_client(client_socket)
-            
-    def handle_client(self, client_socket):
+    
+    def  handle_client(self, client_socket):
+        prompt = "Are you operator?"
+        client_socket.send(prompt.encode())
+        #Process reponsonse
+        response = client_socket.recv(1024).decode().strip().upper()
+        if response == 'yes':
+            self.handle_operator(client_socket)
+        else:
+            self.handle_player(client_socket)
+
+    def handle_operator(self, client_socket):
+        random()
+
+    def handle_player(self, client_socket):
         """Handle one client connection"""
         player_id = None
         try:
@@ -118,7 +184,7 @@ class GameServer:
             while True:
                 # Send current game state
                 player = self.game_state.players[player_id]
-                status = f"\n=== {player['name']} ===\n"
+                status = f"\n=== {player['id']}: {player['name']} ===\n"
                 status += f"Position: ({player['x']}, {player['y']})\n"
                 status += f"Health: {player['health']}/{player['max_health']}\n"
                 
@@ -161,6 +227,11 @@ class GameServer:
                     client_socket.send(f"*** BATTLE: {result['message']} ***\n".encode())
                 elif command == 'ADD ENEMY':
                     client_socket.send(b"This command isn't functional\n")
+                elif command == 'POSITIONS':
+                    result = self.game_state.get_all_positions()
+                    # Pretty JSON for readability
+                    json_data = json.dumps(result, indent=2)
+                    client_socket.send(json_data.encode())
                 else:
                     client_socket.send(b"Unknown command. Use arrows to move, 'attack' to fight\n")
                     

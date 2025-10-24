@@ -1,6 +1,7 @@
 #the simpilest client money can buy
 import socket
 import os
+import json
 
 def clear_terminal():
     """Clears the terminal screen based on the operating system."""
@@ -12,6 +13,7 @@ def clear_terminal():
         _ = os.system('clear')
 
 def start_client(ip, port):
+    print(f"Connecting to Server: {ip}:{port}")
     client_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     movement_commands = {
                     'w':'MOVE_UP',
@@ -21,7 +23,12 @@ def start_client(ip, port):
                 }    
 
     try:
-        client_socket.connect(('localhost',8888))
+        client_socket.connect((ip,port))
+        data = client_socket.recv(1024).decode()
+        print(f"Server asked: {data}")
+        
+        # Respond "yes" to identify as operator
+        client_socket.send(b"no\n")
 
         while True:
             clear_terminal()
@@ -37,6 +44,9 @@ def start_client(ip, port):
                 user_input = input()
                 if user_input in ['w','a','s','d']:
                     command = movement_commands[user_input]
+                elif user_input.upper() == "POSITIONS":
+                    client_socket.send("POSITIONS\n".encode())  # Send command first
+                    receive_positions(client_socket) 
                 else:
                     command = user_input
                 client_socket.send(f"{command}\n".encode())
@@ -45,6 +55,20 @@ def start_client(ip, port):
         print(f"Connection error: {e}")
     finally:
         client_socket.close()
+
+def receive_positions(client_socket):
+    clear_terminal()
+    data = client_socket.recv(4096).decode()  # Receive larger buffer for JSON
+    try:
+        positions = json.loads(data)
+        print("Received positions:")
+        for entity in positions:
+            print(f"  {entity['type']}: {entity['name']} at ({entity['x']}, {entity['y']})")
+        input("Press enter to go back.")
+    except json.JSONDecodeError:
+        print("Raw response:", data)
+
+"""Starting the Server Here"""
 if __name__ == "__main__":
     string = input("Enter IP:PORT(Press Enter for Default): ")
     if string == '':
@@ -54,5 +78,4 @@ if __name__ == "__main__":
         ip_full = string.split(':')
         ip = ip_full[0]
         port = ip_full[1]
-    print("Connecting to Server...")
     start_client(ip, port)
