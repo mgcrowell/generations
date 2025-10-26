@@ -4,6 +4,7 @@ import random
 import threading
 
 """Generations Server Testing - Now With Threading!"""
+
 # ===== PROTOCOL DEFINITION =====
 # 
 # MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
@@ -14,6 +15,7 @@ import threading
 # - ERROR: "ERROR:error_message"
 # - SUCCESS: "SUCCESS:message"
 # - PROMPT: "PROMPT:prompt_text"
+# - UPDATE: "UPDATE: game_state"
 #
 # CLIENT -> SERVER: plain commands like "MOVE north", "ATTACK", "POSITIONS"
 # SERVER -> CLIENT: always uses PROTOCOL_FORMAT
@@ -28,7 +30,7 @@ class GameState:
         self.slot_to_player = {}
         self.battle = 0
         self.lock = threading.Lock()  # Add thread lock for thread safety
-
+    
     def add_player(self, name):
         with self.lock:  # Thread-safe access
             if not self.available_slots:
@@ -49,7 +51,7 @@ class GameState:
             }
             self.slot_to_player[slot] = player_id
             return player_id
-
+    
     def remove_player(self, player_id):
         """Remove a player and free up their slot"""
         with self.lock:  # Thread-safe access
@@ -68,7 +70,7 @@ class GameState:
                 del self.players[player_id]
                 
                 print(f"Player removed from slot {slot}")
-
+    
     def get_available_slots(self):
         """Return list of available slots"""
         with self.lock:
@@ -87,7 +89,6 @@ class GameState:
     
     def move_player(self, player_id, direction):
         with self.lock:  # Thread-safe access
-            #print(f"Moving Player {direction}".encode())
             player = self.players[player_id]
             dx, dy = 0, 0
             if direction == "UP": dy = 1
@@ -161,12 +162,72 @@ class GameState:
                         }
             return {"type": "ERROR", "message": "No enemy to attack?"}
 
+    def sate_update(self, player_id):
+        #Updates Game State for player; position data for entities within 20x20 relative grid; player health; other stuff?
+        with self.lock:
+            #Get player data
+            player = self.players[player_id]
+            # Get enemy positions
+            enemy_positions = [
+                {
+                    "id": enemy["id"],
+                    "name": enemy["name"], 
+                    "x": enemy["x"],
+                    "y": enemy["y"],
+                    "type": "enemy"
+                }
+                for enemy in self.enemies
+                if abs(enemy['x'] - player['x']) <= 20 and abs(enemy['y'] - player['y']) <= 20
+            ]
+            # Get player data
+            player_data = [
+                {
+                    "id": player_data["id"],
+                    "name": player_data["name"],
+                    "x": player_data["x"],
+                    "y": player_data["y"],
+                    "health": player_data["health"],
+                    "type": "player"
+                }
+                for player_data in player
+            ]
+            
+            return enemy_positions + player_data
 class GameServer:
     def __init__(self, host='localhost', port=8888):
         self.host = host
         self.port = port
         self.game_state = GameState()
+ #THE PROTOCOL MESSAGING IS HANDLED HERE   
+    def _send_protocol_message(self, client_socket, command_type, data):
+        """Send a message using the protocol format"""
+        if isinstance(data, dict):
+            data = json.dumps(data)
+        message = f"{command_type}:{data}\n"
+        client_socket.send(message.encode())
     
+    def _send_prompt(self, client_socket, prompt_text):
+        """Send a prompt using the protocol"""
+        self._send_protocol_message(client_socket, "PROMPT", prompt_text)
+    
+    def _send_error(self, client_socket, error_message):
+        """Send an error message using the protocol"""
+        self._send_protocol_message(client_socket, "ERROR", error_message)
+    
+    def _send_success(self, client_socket, success_message):
+        """Send a success message using the protocol"""
+        self._send_protocol_message(client_socket, "SUCCESS", success_message)
+    
+    def _send_player_info(self, client_socket, player_data):
+        """Send player information using the protocol"""
+        self._send_protocol_message(client_socket, "PLAYER_INFO", player_data)
+    
+    def _send_positions(self, client_socket, positions_data):
+        """Send positions data using the protocol"""
+        self._send_protocol_message(client_socket, "POSITIONS", positions_data)
+    def _send_update(self, client_socket, update_data):
+        self._send_protocol_message(client_socket, "UPDATE", update_data)
+
     def start(self):
         """Start the main server loop"""
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -190,40 +251,42 @@ class GameServer:
             print(f"Active threads: {threading.active_count() - 1}")  # Subtract main thread
     
     def handle_client(self, client_socket):
-        prompt = "Are you operator?"
-        client_socket.send(prompt.encode())
+        self._send_prompt(client_socket, "Are you operator?")
         # Process response
         response = client_socket.recv(1024).decode().strip().upper()
         if response == 'YES':
             self.handle_operator(client_socket)
         else:
             self.handle_player(client_socket)
-
+    
     def handle_operator(self, client_socket):
         # Your operator logic here
-        client_socket.send(b"Operator mode not implemented yet\n")
+        self._send_error(client_socket, "Operator mode not implemented yet")
         client_socket.close()
-
+    
     def handle_player(self, client_socket):
         """Handle one client connection in its own thread"""
         player_id = None
         try:
             # Get player name
-            client_socket.send(b"Welcome:\nEnter your name: ")
+            self._send_prompt(client_socket, "Welcome:\nEnter your name: ")
             name_data = client_socket.recv(1024)
             player_name = name_data.decode().strip()
             
             # Add player to game
             player_id = self.game_state.add_player(player_name)
             if player_id is None:
-                client_socket.send(b"Server is full! Try again later.\n")
+                self._send_error(client_socket, "Server is full! Try again later.")
                 return
-                
-            client_socket.send(f"Hello {player_name}! Use WASD to move, 'attack' to fight, 'quit' to exit\n".encode())
+            
+            # Send player info
+            player_data = self.game_state.players[player_id]
+            self._send_player_info(client_socket, player_data)
+            self._send_success(client_socket, f"Hello {player_name}! Use WASD to move, 'attack' to fight, 'quit' to exit")
             
             # Main game loop for this client
             while True:
-                # Send current game state
+                # Send current game state as player info
                 player = self.game_state.players[player_id]
                 status = f"\n=== {player['id']}: {player['name']} ===\n"
                 status += f"Position: ({player['x']}, {player['y']})\n"
@@ -235,8 +298,7 @@ class GameServer:
                     if dist <= 2 and self.game_state.battle == 0:
                         status += f"You sense a {enemy['name']} nearby...\n"
                 
-                status += "\nWhat to do now...? > "
-                client_socket.send(status.encode())
+                self._send_prompt(client_socket, status + "\nWhat to do now...? > ")
                 
                 # Get player input
                 data = client_socket.recv(1024)
@@ -254,30 +316,30 @@ class GameServer:
                 print(f"Player {player_id}: {command}")
                 
                 if command == 'QUIT':
-                    client_socket.send(b"Exiting\n")
+                    self._send_success(client_socket, "Exiting")
                     break
                 elif command in movement_commands:
                     direction = movement_commands[command]
                     result = self.game_state.move_player(player_id, direction)
                     if result["type"] == "ENCOUNTER":
-                        client_socket.send(f"\n*** You are entering battle with {result['enemy']}! ***\n".encode())
+                        self._send_success(client_socket, f"\n*** You are entering battle with {result['enemy']}! ***")
                     else:
-                        client_socket.send(f"Moved to ({result['x']}, {result['y']})\n".encode())
+                        self._send_success(client_socket, f"Moved to ({result['x']}, {result['y']})")
                 elif command == 'ATTACK':
                     result = self.game_state.attack_enemy(player_id)
-                    client_socket.send(f"*** BATTLE: {result['message']} ***\n".encode())
+                    self._send_success(client_socket, f"*** BATTLE: {result['message']} ***")
                 elif command == 'ADD ENEMY':
-                    client_socket.send(b"This command isn't functional\n")
+                    self._send_error(client_socket, "This command isn't functional")
                 elif command == 'POSITIONS':
                     result = self.game_state.get_all_positions()
-                    json_data = json.dumps(result)
-                    client_socket.send(json_data.encode())
-                    client_socket.send(b"Got positions\n")
+                    self._send_positions(client_socket, result)
+                    self._send_success(client_socket, "Got positions")
                 else:
-                    client_socket.send(b"Unknown command. Use arrows to move, 'attack' to fight\n")
+                    self._send_error(client_socket, "Unknown command. Use arrows to move, 'attack' to fight")
                     
         except Exception as e:
             print(f"Client error: {e}")
+            self._send_error(client_socket, f"Server error: {str(e)}")
         finally:
             client_socket.close()
             if player_id and player_id in self.game_state.players:
@@ -290,6 +352,7 @@ class GameServer:
                     print(f"Player {player_id} was already removed")
                 except Exception as e:
                     print(f"Error during player removal: {e}")
+
 
 if __name__ == "__main__":
     server = GameServer()
