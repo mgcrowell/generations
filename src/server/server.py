@@ -353,7 +353,7 @@ class GameServer:
                 except Exception as e:
                     print(f"Error during player removal: {e}")
 
-
+#Entry Point
 if __name__ == "__main__":
     server = GameServer()
     server.start()
