@@ -1,2 +1,2 @@
-# game-in-c
-Just playing around in C
+# Generations
+dunno yet - protocol testing branch edition
