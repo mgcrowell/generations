@@ -25,7 +25,7 @@ import threading
 class GameState:
     def __init__(self):
         self.players = {}  # {slot:, id:, {"name": "Ari", "x": 0, "y": 0, "health": 100}}
-        self.enemies = [{"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 20}]
+        self.enemies = [{"entity": 0,"id": 1, "name": "Demon", "x": 5, "y": 5, "health": 20}] #{entitiy: for global tracking, id: the unique id of an enemy, x: , y: , health:
         self.available_slots = ['1','2','3','4']
         self.slot_to_player = {}
         self.battle = 0
@@ -84,8 +84,8 @@ class GameState:
             return None
     
     def add_enemies(self, id, x, y):
-        # Nothing here yet!
-        return 404
+        with self.lock:
+
     
     def move_player(self, player_id, direction):
         with self.lock:  # Thread-safe access
