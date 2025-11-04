@@ -85,6 +85,7 @@ class GameState:
     
     def add_enemies(self, id, x, y):
         with self.lock:
+            return 404
 
     
     def move_player(self, player_id, direction):
