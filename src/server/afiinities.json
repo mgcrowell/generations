@@ -1,0 +1,38 @@
+{
+  "damage_types": {
+    "elemental": [
+      "Fire",
+      "Ice", 
+      "Lightning",
+      "Wind",
+      "Water"
+    ],
+    "divine": [
+      "Light",
+      "Dark",
+      "Bless",
+      "Curse"
+    ],
+    "special": [
+      "Almighty",
+      "Healing",
+      "Ailment"
+    ],
+    "physical": [
+      "Phys",
+      "Pierce",
+      "Blunt"
+    ],
+    "support": [
+      "Luck"
+    ]
+  },
+  "resistance_effects": {
+    "weak": "Takes double damage",
+    "normal": "Takes standard damage", 
+    "strong": "Takes half damage",
+    "null": "Takes no damage",
+    "absorb": "Healed by damage",
+    "repel": "Damage reflected back to attacker"
+  }
+}

@@ -1,0 +1,308 @@
+[
+  {
+    "id": 1,
+    "level": 1,
+    "name": "Goblin",
+    "health": 20,
+    "magic": 10,
+    "resistances": {
+      "Fire": "weak"
+    },
+    "attacks": {
+        "punch": 10
+    }
+  },
+  {
+    "id": 2,
+    "level": 3,
+    "name": "Slime",
+    "health": 35,
+    "magic": 25,
+    "resistances": {
+      "Water": "strong",
+      "Fire": "weak",
+      "Ice": "weak"
+    },
+    "attacks": {
+        "smoochie poo": 10
+    }
+  },
+  {
+    "id": 3,
+    "level": 5,
+    "name": "Pixie",
+    "health": 40,
+    "magic": 60,
+    "resistances": {
+      "Wind": "strong",
+      "Healing": "strong",
+      "Dark": "weak",
+      "Electric": "weak"
+    }
+  },
+  {
+    "id": 4,
+    "level": 7,
+    "name": "Bomb",
+    "health": 80,
+    "magic": 30,
+    "resistances": {
+      "Fire": "absorb",
+      "Ice": "weak",
+      "Water": "weak"
+    }
+  },
+  {
+    "id": 5,
+    "level": 9,
+    "name": "Zombie",
+    "health": 65,
+    "magic": 15,
+    "resistances": {
+      "Dark": "strong",
+      "Fire": "weak",
+      "Light": "weak",
+      "Healing": "weak"
+    }
+  },
+  {
+    "id": 6,
+    "level": 10,
+    "name": "Jack Frost",
+    "health": 75,
+    "magic": 80,
+    "resistances": {
+      "Ice": "absorb",
+      "Fire": "weak"
+    }
+  },
+  {
+    "id": 7,
+    "level": 12,
+    "name": "Skeleton",
+    "health": 55,
+    "magic": 20,
+    "resistances": {
+      "Dark": "strong",
+      "Blunt": "weak",
+      "Light": "weak"
+    }
+  },
+  {
+    "id": 8,
+    "level": 14,
+    "name": "Cait Sith",
+    "health": 90,
+    "magic": 70,
+    "resistances": {
+      "Luck": "strong"
+    }
+  },
+  {
+    "id": 9,
+    "level": 15,
+    "name": "Ahriman",
+    "health": 110,
+    "magic": 120,
+    "resistances": {
+      "Dark": "absorb",
+      "Curse": "strong",
+      "Light": "weak"
+    }
+  },
+  {
+    "id": 10,
+    "level": 18,
+    "name": "Cerberus",
+    "health": 200,
+    "magic": 90,
+    "resistances": {
+      "Fire": "strong",
+      "Dark": "strong",
+      "Ice": "weak",
+      "Light": "weak"
+    }
+  },
+  {
+    "id": 11,
+    "level": 20,
+    "name": "Tonberry",
+    "health": 150,
+    "magic": 100,
+    "resistances": {
+      "Dark": "strong",
+      "Fire": "weak"
+    }
+  },
+  {
+    "id": 12,
+    "level": 22,
+    "name": "Shiva",
+    "health": 180,
+    "magic": 250,
+    "resistances": {
+      "Ice": "absorb",
+      "Fire": "weak"
+    }
+  },
+  {
+    "id": 13,
+    "level": 24,
+    "name": "Ifrit",
+    "health": 250,
+    "magic": 180,
+    "resistances": {
+      "Fire": "absorb",
+      "Ice": "weak",
+      "Water": "weak"
+    }
+  },
+  {
+    "id": 14,
+    "level": 25,
+    "name": "Mara",
+    "health": 300,
+    "magic": 150,
+    "resistances": {
+      "Curse": "strong",
+      "Ailment": "strong",
+      "Light": "weak",
+      "Bless": "weak"
+    }
+  },
+  {
+    "id": 15,
+    "level": 28,
+    "name": "Cactuar",
+    "health": 100,
+    "magic": 200,
+    "resistances": {
+      "Wind": "strong",
+      "Pierce": "weak"
+    }
+  },
+  {
+    "id": 16,
+    "level": 30,
+    "name": "Odin",
+    "health": 400,
+    "magic": 220,
+    "resistances": {
+      "Lightning": "strong",
+      "Pierce": "strong"
+    }
+  },
+  {
+    "id": 17,
+    "level": 32,
+    "name": "Archangel",
+    "health": 320,
+    "magic": 280,
+    "resistances": {
+      "Light": "absorb",
+      "Bless": "strong",
+      "Dark": "weak",
+      "Curse": "weak"
+    }
+  },
+  {
+    "id": 18,
+    "level": 35,
+    "name": "Behemoth",
+    "health": 600,
+    "magic": 150,
+    "resistances": {
+      "Ice": "weak"
+    }
+  },
+  {
+    "id": 19,
+    "level": 38,
+    "name": "Lilith",
+    "health": 350,
+    "magic": 400,
+    "resistances": {
+      "Dark": "absorb",
+      "Ailment": "strong",
+      "Light": "weak",
+      "Bless": "weak"
+    }
+  },
+  {
+    "id": 20,
+    "level": 40,
+    "name": "Bahamut",
+    "health": 800,
+    "magic": 500,
+    "resistances": {
+      "Fire": "strong",
+      "Lightning": "strong",
+      "Wind": "strong",
+      "Ice": "weak"
+    }
+  },
+  {
+    "id": 21,
+    "level": 42,
+    "name": "Mara (Giant)",
+    "health": 950,
+    "magic": 300,
+    "resistances": {
+      "Ailment": "strong",
+      "Phys": "strong",
+      "Light": "weak",
+      "Bless": "weak"
+    }
+  },
+  {
+    "id": 22,
+    "level": 45,
+    "name": "Alice",
+    "health": 500,
+    "magic": 650,
+    "resistances": {
+      "Dark": "absorb",
+      "Curse": "strong",
+      "Light": "weak",
+      "Bless": "weak"
+    }
+  },
+  {
+    "id": 23,
+    "level": 48,
+    "name": "Metatron",
+    "health": 750,
+    "magic": 800,
+    "resistances": {
+      "Light": "absorb",
+      "Bless": "absorb",
+      "Almighty": "strong",
+      "Dark": "weak"
+    }
+  },
+  {
+    "id": 24,
+    "level": 50,
+    "name": "Omega Weapon",
+    "health": 1500,
+    "magic": 1000,
+    "resistances": {
+      "Fire": "null",
+      "Ice": "null",
+      "Lightning": "null",
+      "Wind": "null"
+    }
+  },
+  {
+    "id": 25,
+    "level": 99,
+    "name": "Shiva (P5)",
+    "health": 1200,
+    "magic": 950,
+    "resistances": {
+      "Ice": "absorb",
+      "Almighty": "strong",
+      "Fire": "weak"
+    }
+  }
+]
