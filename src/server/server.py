@@ -13,7 +13,7 @@ debug = True
 # 
 # MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
 #
-# COMMAND TYPES:
+# SERVER COMMAND TYPES:
 # - PLAYER_INFO: "player_data_json"
 # - POSITIONS: "positions_json" 
 # - ERROR: "error_message"
@@ -21,8 +21,16 @@ debug = True
 # - PROMPT: "prompt_text"
 # - UPDATE: "game_state"
 #
-# CLIENT -> SERVER: plain commands like "MOVE north", "ATTACK", "POSITIONS"
-# SERVER -> CLIENT: always uses PROTOCOL_FORMAT
+# CLIENT COMMAND TYPES:
+# - MOVE: "direction"           # north, south, east, west, up, down
+# - ATTACK: "target_id"         # ID of enemy/player to attack
+# - INTERACT: "object_id"       # ID of object to interact with
+# - LOOK: ""                    # Get room description
+# - INVENTORY: ""               # Check inventory
+# - USE: "item_id"              # Use item from inventory
+# - CHAT: "message"             # Send chat message
+# - RESPONSE: "user_input"      # Response to server prompts
+# - READY: ""                   # Client is ready for game start
 #
 # ===============================
 

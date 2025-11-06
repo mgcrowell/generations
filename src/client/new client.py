@@ -3,6 +3,31 @@ import socket
 import os
 import json
 import time
+debug = True
+# ===== PROTOCOL DEFINITION =====
+# 
+# MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
+#
+# SERVER COMMAND TYPES:
+# - PLAYER_INFO: "player_data_json"
+# - POSITIONS: "positions_json" 
+# - ERROR: "error_message"
+# - SUCCESS: "message"
+# - PROMPT: "prompt_text"
+# - UPDATE: "game_state"
+#
+# CLIENT COMMAND TYPES:
+# - MOVE: "direction"           # north, south, east, west, up, down
+# - ATTACK: "target_id"         # ID of enemy/player to attack
+# - INTERACT: "object_id"       # ID of object to interact with
+# - LOOK: ""                    # Get room description
+# - INVENTORY: ""               # Check inventory
+# - USE: "item_id"              # Use item from inventory
+# - CHAT: "message"             # Send chat message
+# - RESPONSE: "user_input"      # Response to server prompts
+# - READY: ""                   # Client is ready for game start
+#
+# ===============================
 
 class GameClient:
     def __init__(self):
@@ -23,16 +48,46 @@ class GameClient:
             print(f"Connection failed: {e}")
             return False
     
-    def send_message(self, data):
-        if self.connected:
-            # caht gpt implement protocol here
-            self.socket.send(json.dumps(data).encode())
+#THE PROTOCOL MESSAGING IS HANDLED HERE   
+    def _send_protocol_message(self, client_socket, command_type, data):
+        """Send a message using the protocol format"""
+        #Always create a structured message
+        message_obj = {
+            "type": command_type,
+            "data": data,
+            "timestamp": time.time()
+        }
+        message_str = json.dumps(message_obj) + "\n"
+        if debug:
+            print(f"Sending: {message_str.strip()}")
+
+        client_socket.send(message_str.encode())
     
-    def receive_message(self):
-        if self.connected:
-            data = self.socket.recv(1024)
-            return self.parse_message(data.decode())
-        return None
+    def _send_response(self, client_socket, response_text):
+        """Send a response using the protocol"""
+        self._send_protocol_message(client_socket, "RESPONSE", response_text)
+    
+    def _send_move(self, client_socket, move_data):
+        """Send a move using the protocol"""
+        self._send_protocol_message(client_socket, "MOVE", move_data)
+    
+    def _send_attack(self, client_socket, attack_data):
+        """Send an attack using the protocol"""
+        self._send_protocol_message(client_socket, "ATTACK", attack_data)
+    
+    def _send_interact(self, client_socket, interact_data):
+        """Send an interact using the protocol"""
+        self._send_protocol_message(client_socket, "INTERACT", interact_data)
+    def _send_use(self, client_socket, use_data):
+        self._send_protocol_message(client_socket, "USE", use_data)
+
+    def _send_chat(self, client_socket, chat_data):
+        self._send_protocol_message(client_socket, "CHAT", chat_data)
+
+    def _send_client_ready(self, client_socket, ready_data):
+        self._send_protocol_message(client_socket, "READY", ready_data)
+    
+
     @staticmethod
     def parse_message(raw_message):
         try:
