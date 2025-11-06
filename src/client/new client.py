@@ -2,6 +2,7 @@
 import socket
 import os
 import json
+import time
 
 class GameClient:
     def __init__(self):
@@ -32,12 +33,19 @@ class GameClient:
             data = self.socket.recv(1024)
             return self.parse_message(data.decode())
         return None
-    
-    def parse_message(self, data):
+    @staticmethod
+    def parse_message(raw_message):
         try:
-            return json.loads(data)
+            message_str = raw_message.decode().strip()
+            message_obj = json.loads(message_str)
+
+            return{
+                "type": message_obj.get("type"),
+                "data": message_obj.get("data"),
+                "timestamp": message_obj.get("timestamp")
+            }
         except json.JSONDecodeError:
-            return {"error": "Invalid message format"}
+            return {"type": "ERROR", "data": "Invalid JSON Format"}
 
 class PlayerGUI:
     def __init__(self, client):
@@ -73,5 +81,17 @@ if __name__ == "__main__":
     if client.connect(ip, port):
         # Start the game loop here
         print("Connected successfully!")
-    else:
-        print("Failed to connect")
+        client.socket.send(b"no\n")
+        if client.socket:
+            while True:
+                raw = client.socket.recv(1024)
+                if not raw:
+                    break
+                parsed = client.parse_message(raw)
+                print(f"{parsed}")
+                command = input(":")
+                if command == "quit":
+                    break
+        else:
+            print("Failed to connect")
+client.clear_terminal()

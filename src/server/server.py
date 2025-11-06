@@ -2,6 +2,10 @@ import socket
 import json
 import random
 import threading
+import time
+
+debug = True
+
 
 """Generations Server Testing - Now With Threading!"""
 
@@ -10,12 +14,12 @@ import threading
 # MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
 #
 # COMMAND TYPES:
-# - PLAYER_INFO: "PLAYER_INFO:player_data_json"
-# - POSITIONS: "POSITIONS:positions_json" 
-# - ERROR: "ERROR:error_message"
-# - SUCCESS: "SUCCESS:message"
-# - PROMPT: "PROMPT:prompt_text"
-# - UPDATE: "UPDATE: game_state"
+# - PLAYER_INFO: "player_data_json"
+# - POSITIONS: "positions_json" 
+# - ERROR: "error_message"
+# - SUCCESS: "message"
+# - PROMPT: "prompt_text"
+# - UPDATE: "game_state"
 #
 # CLIENT -> SERVER: plain commands like "MOVE north", "ATTACK", "POSITIONS"
 # SERVER -> CLIENT: always uses PROTOCOL_FORMAT
@@ -202,10 +206,17 @@ class GameServer:
  #THE PROTOCOL MESSAGING IS HANDLED HERE   
     def _send_protocol_message(self, client_socket, command_type, data):
         """Send a message using the protocol format"""
-        if isinstance(data, dict):
-            data = json.dumps(data)
-        message = f"{command_type}:{data}\n"
-        client_socket.send(message.encode())
+        #Always create a structured message
+        message_obj = {
+            "type": command_type,
+            "data": data,
+            "timestamp": time.time()
+        }
+        message_str = json.dumps(message_obj) + "\n"
+        if debug:
+            print(f"Sending: {message_str.strip()}")
+
+        client_socket.send(message_str.encode())
     
     def _send_prompt(self, client_socket, prompt_text):
         """Send a prompt using the protocol"""
