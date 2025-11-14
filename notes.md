@@ -27,3 +27,20 @@ Here's my thought
 Client:
 I don't even think this works atm.
 It will need a full rewrite with the new protocol
+
+
+Server - Client Flow:
+Connection Phase
+Server  → "ARE_YOU_OPERATOR?"
+Client  → "NO" 
+Server  → "REQUEST_PLAYER_INFO"
+Client  → "PLAYER_INFO:name=John Gamer"
+Server  → "PLAYER_CREATED:id=123"
+
+Game Loop
+Client  → "REQUEST_FULL_STATE"
+Server  → "FULL_STATE:{player_data, enemies, map, game_time, etc.}"
+Client  → "MOVE:UP"
+Server  → "MOVE_RESULT:success,new_position,encounter_enemy"
+Client  → "ATTACK"
+Server  → "BATTLE_RESULT:damage_dealt,enemy_health,reward"

@@ -223,8 +223,9 @@ class GameServer:
         message_str = json.dumps(message_obj) + "\n"
         if debug:
             print(f"Sending: {message_str.strip()}")
-
         client_socket.send(message_str.encode())
+        if self.operator_socket:
+            self.send_to_op(self.operator_socket,message_str.strip())
     
     def _send_prompt(self, client_socket, prompt_text):
         """Send a prompt using the protocol"""
@@ -247,6 +248,11 @@ class GameServer:
         self._send_protocol_message(client_socket, "POSITIONS", positions_data)
     def _send_update(self, client_socket, update_data):
         self._send_protocol_message(client_socket, "UPDATE", update_data)
+
+    ##OPERATOR FUNCTIONS
+    def send_to_op(self, operator_socket, data):
+        return
+    
 
     def start(self):
         """Start the main server loop"""
@@ -281,6 +287,7 @@ class GameServer:
     
     def handle_operator(self, client_socket):
         # Your operator logic here
+        self.operator_socket = client_socket
         self._send_error(client_socket, "Operator mode not implemented yet")
         client_socket.close()
     

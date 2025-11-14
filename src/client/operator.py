@@ -3,7 +3,6 @@ import socket
 import os
 import json
 import time
-
 debug = True
 # ===== PROTOCOL DEFINITION =====
 # 
