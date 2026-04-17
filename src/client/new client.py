@@ -4,6 +4,11 @@ import os
 import json
 import time
 debug = True
+
+#Globals
+buffer = ""
+
+
 # ===== PROTOCOL DEFINITION =====
 # 
 # MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
@@ -47,6 +52,24 @@ class GameClient:
         except Exception as e:
             print(f"Connection failed: {e}")
             return False
+    def print_from_server(self, data):
+        global buffer
+        if not data:
+            return  # Server closed connection
+
+        buffer += data
+
+        # 2. Process all complete lines in the buffer
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+        
+        if line.strip():
+            try:
+                msg = json.loads(line)
+                print(msg.get("data", ""))
+            except json.JSONDecodeError:
+                print("Error: Could not parse JSON")
+
     
 #THE PROTOCOL MESSAGING IS HANDLED HERE   
     def _send_protocol_message(self, client_socket, command_type, data):
@@ -124,6 +147,7 @@ class PlayerGUI:
 if __name__ == "__main__":
     client = GameClient()
     gui = PlayerGUI(client)
+   
     
     # Get connected for free
     string = input("Enter IP:PORT (Press Enter For Default): ")
@@ -136,17 +160,27 @@ if __name__ == "__main__":
     if client.connect(ip, port):
         # Start the game loop here
         print("Connected successfully!")
-        client.socket.send(b"no\n")
+        #client.socket.send(b"no\n")
         if client.socket:
             while True:
+                '''
+                Old client handling logic
                 raw = client.socket.recv(1024)
                 if not raw:
                     break
                 parsed = client.parse_message(raw)
-                print(f"{parsed}")
-                command = input(":")
+                print(f"{parsed}")'''
+                data = client.socket.recv(4096).decode('utf-8')
+                message = client.print_from_server(data)
+                command = input(">>")
                 if command == "quit":
                     break
+                if not command:
+                    client.clear_terminal()
+                    command = "UPDATE"
+                client.socket.send(command.encode())
+
+
         else:
             print("Failed to connect")
 client.clear_terminal()

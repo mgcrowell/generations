@@ -175,7 +175,7 @@ class GameState:
                         }
             return {"type": "ERROR", "message": "No enemy to attack?"}
 
-    def sate_update(self, player_id):
+    def state_update(self, player_id):
         #Updates Game State for player; position data for entities within 20x20 relative grid; player health; other stuff?
         with self.lock:
             #Get player data
@@ -274,6 +274,8 @@ class GameServer:
         self._send_prompt(client_socket, "Are you operator?")
         # Process response
         response = client_socket.recv(1024).decode().strip().upper()
+        if debug:
+            print (f"response: {response}")
         if response == 'YES':
             self.handle_operator(client_socket)
         else:
@@ -291,10 +293,14 @@ class GameServer:
             # Get player name
             self._send_prompt(client_socket, "Welcome:\nEnter your name: ")
             name_data = client_socket.recv(1024)
+            if debug:
+                print (f"response: {name_data}")
             player_name = name_data.decode().strip()
             
             # Add player to game
             player_id = self.game_state.add_player(player_name)
+            if debug:
+                print(f'player_id: {player_id}')
             if player_id is None:
                 self._send_error(client_socket, "Server is full! Try again later.")
                 return
@@ -322,6 +328,8 @@ class GameServer:
                 
                 # Get player input
                 data = client_socket.recv(1024)
+                if debug:
+                    print (f"response: {data}")
                 if not data:
                     break
                 
@@ -354,6 +362,8 @@ class GameServer:
                     result = self.game_state.get_all_positions()
                     self._send_positions(client_socket, result)
                     self._send_success(client_socket, "Got positions")
+                elif command == 'UPDATE':
+                    self._send_player_info(client_socket, player_data)
                 else:
                     self._send_error(client_socket, "Unknown command. Use arrows to move, 'attack' to fight")
                     
