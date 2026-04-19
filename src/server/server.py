@@ -102,7 +102,7 @@ class GameState:
     
     def move_player(self, player_id, direction):
         with self.lock:  # Thread-safe access
-            player = self.players[player_id]
+            player = self.players.get(player_id)
             dx, dy = 0, 0
             if direction == "UP": dy = 1
             elif direction == "DOWN": dy = -1
@@ -151,7 +151,18 @@ class GameState:
             ]
             
             return enemy_positions + player_positions
-    
+        
+    def _print_playerpos_server(self, player_id):
+        with self.lock:
+            #Access the specific player by ID
+            player_data = self.players.get(player_id)
+
+            if player_data:
+                #Access the coordinates directly from the dictionary
+                print(player_data['x'], player_data['y'])
+            else:
+                print(f"Player {player_id} not found.")
+
     def attack_enemy(self, player_id):
         with self.lock:  # Thread-safe access
             player = self.players[player_id]
@@ -206,6 +217,8 @@ class GameState:
             ]
             
             return enemy_positions + player_data
+        
+
 class GameServer:
     def __init__(self, host='localhost', port=8888):
         self.host = host
@@ -342,7 +355,7 @@ class GameServer:
                     'MOVE_RIGHT': 'RIGHT'
                 }
                 print(f"Player {player_id}: {command}")
-                
+    ### COMMAND PALLETE ###
                 if command == 'QUIT':
                     self._send_success(client_socket, "Exiting")
                     break
@@ -364,6 +377,8 @@ class GameServer:
                     self._send_success(client_socket, "Got positions")
                 elif command == 'UPDATE':
                     self._send_player_info(client_socket, player_data)
+                elif command == 'SUCCESS':
+                    self._send_success(client_socket, "Testing Success")
                 else:
                     self._send_error(client_socket, "Unknown command. Use arrows to move, 'attack' to fight")
                     

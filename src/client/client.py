@@ -1,136 +1,208 @@
-#the simpilest client money can buy
+#the first client rewrite we made it
 import socket
 import os
 import json
+import time
+import threading
+debug = True
 
-def clear_terminal():
-    """Clears the terminal screen based on the operating system."""
-    # For Windows
-    if os.name == 'nt':
-        _ = os.system('cls')
-    # For macOS and Linux
-    else:
-        _ = os.system('clear')
+#Globals
+buffer = ""
 
-def parse_protocol_message(data):
-    """Parse protocol messages in format 'COMMAND_TYPE:DATA\n'"""
-    lines = data.strip().split('\n')
-    messages = []
+
+# ===== PROTOCOL DEFINITION =====
+# 
+# MESSAGE FORMAT: "COMMAND_TYPE:DATA\n"
+#
+# SERVER COMMAND TYPES:
+# - PLAYER_INFO: "player_data_json"
+# - POSITIONS: "positions_json" 
+# - ERROR: "error_message"
+# - SUCCESS: "message"
+# - PROMPT: "prompt_text"
+# - UPDATE: "game_state"
+#
+# CLIENT COMMAND TYPES:
+# - MOVE: "direction"           # north, south, east, west, up, down
+# - ATTACK: "target_id"         # ID of enemy/player to attack
+# - INTERACT: "object_id"       # ID of object to interact with
+# - LOOK: ""                    # Get room description
+# - INVENTORY: ""               # Check inventory
+# - USE: "item_id"              # Use item from inventory
+# - CHAT: "message"             # Send chat message
+# - RESPONSE: "user_input"      # Response to server prompts
+# - READY: ""                   # Client is ready for game start
+#
+# ===============================
+
+def listen_to_server(client):
+    while client.connected:
+        try:
+            data = client.socket.recv(4096).decode('utf-8')
+            if not data:
+                break
+            client.print_from_server(data)
+        except Exception as e:
+            print(f"Error: {e}")
+            break
+
+
+class GameClient:
+    def __init__(self):
+        self.socket = None
+        self.connected = False
+        
+    def clear_terminal(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
     
-    for line in lines:
-        if ':' in line:
-            command_type, message_data = line.split(':', 1)
-            try:
-                # Try to parse as JSON if it looks like JSON
-                if message_data.strip().startswith('{') or message_data.strip().startswith('['):
-                    parsed_data = json.loads(message_data)
-                else:
-                    parsed_data = message_data
-                messages.append({'type': command_type, 'data': parsed_data})
-            except json.JSONDecodeError:
-                messages.append({'type': command_type, 'data': message_data})
-        else:
-            # Handle non-protocol messages (backward compatibility)
-            messages.append({'type': 'RAW', 'data': line})
-    
-    return messages
+    def connect(self, ip, port):
+        print(f"Connecting to Server: {ip}:{port}")
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((ip, port))
+            self.connected = True
+            return True
+        except Exception as e:
+            print(f"Connection failed: {e}")
+            return False
+    def print_from_server(self, data):
+        global buffer
+        if not data:
+            return  # Server closed connection
 
-def display_protocol_message(message):
-    """Display protocol messages in a user-friendly format"""
-    msg_type = message['type']
-    data = message['data']
-    
-    if msg_type == 'PROMPT':
-        print(data, end='')
-    elif msg_type == 'ERROR':
-        print(f"ERROR: {data}")
-    elif msg_type == 'SUCCESS':
-        print(f"{data}")
-    elif msg_type == 'PLAYER_INFO':
-        print("=== PLAYER INFO ===")
-        if isinstance(data, dict):
-            print(f"ID: {data.get('id', 'N/A')}")
-            print(f"Name: {data.get('name', 'N/A')}")
-            print(f"Position: ({data.get('x', 0)}, {data.get('y', 0)})")
-            print(f"Health: {data.get('health', 0)}/{data.get('max_health', 0)}")
-        else:
-            print(data)
-    elif msg_type == 'POSITIONS':
-        print("=== CURRENT POSITIONS ===")
-        if isinstance(data, list):
-            for entity in data:
-                print(f"  {entity.get('type', 'unknown').title()}: {entity.get('name', 'Unknown')} at ({entity.get('x', 0)}, {entity.get('y', 0)})")
-        else:
-            print(data)
-    elif msg_type == 'RAW':
-        print(data, end='')
+        buffer += data
 
-def start_client(ip, port):
-    print(f"Connecting to Server: {ip}:{port}")
-    client_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        # 2. Process all complete lines in the buffer
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+        
+            if line.strip():
+                try:
+                    msg = json.loads(line)
+                    print(msg.get("data", ""))
+                except json.JSONDecodeError:
+                    print("Error: Could not parse JSON")
+
+    
+#THE PROTOCOL MESSAGING IS HANDLED HERE   
+    def _send_protocol_message(self, client_socket, command_type, data):
+        """Send a message using the protocol format"""
+        #Always create a structured message
+        message_obj = {
+            "type": command_type,
+            "data": data,
+            "timestamp": time.time()
+        }
+        message_str = json.dumps(message_obj) + "\n"
+        if debug:
+            print(f"Sending: {message_str.strip()}")
+
+        client_socket.send(message_str.encode())
+    
+    def _send_response(self, client_socket, response_text):
+        """Send a response using the protocol"""
+        self._send_protocol_message(client_socket, "RESPONSE", response_text)
+    
+    def _send_move(self, client_socket, move_data):
+        """Send a move using the protocol"""
+        self._send_protocol_message(client_socket, "MOVE", move_data)
+    
+    def _send_attack(self, client_socket, attack_data):
+        """Send an attack using the protocol"""
+        self._send_protocol_message(client_socket, "ATTACK", attack_data)
+    
+    def _send_interact(self, client_socket, interact_data):
+        """Send an interact using the protocol"""
+        self._send_protocol_message(client_socket, "INTERACT", interact_data)
+    def _send_use(self, client_socket, use_data):
+        self._send_protocol_message(client_socket, "USE", use_data)
+
+    def _send_chat(self, client_socket, chat_data):
+        self._send_protocol_message(client_socket, "CHAT", chat_data)
+
+    def _send_client_ready(self, client_socket, ready_data):
+        self._send_protocol_message(client_socket, "READY", ready_data)
+    
+
+    @staticmethod
+    def parse_message(raw_message):
+        try:
+            message_str = raw_message.decode().strip()
+            message_obj = json.loads(message_str)
+
+            return{
+                "type": message_obj.get("type"),
+                "data": message_obj.get("data"),
+                "timestamp": message_obj.get("timestamp")
+            }
+        except json.JSONDecodeError:
+            return {"type": "ERROR", "data": "Invalid JSON Format"}
+
+class PlayerGUI:
+    def __init__(self, client):
+        self.client = client
+    
+    def display_game_state(self, game_data):
+        # Implement da GUI here
+        pass
+    
+    def handle_input(self):
+        # Handle player input and send to server
+        movement_commands = {
+            'w': 'MOVE_UP',
+            's': 'MOVE_DOWN', 
+            'a': 'MOVE_LEFT',
+            'd': 'MOVE_RIGHT'
+        }
+        #Finish input handling logic
+
+# Usage
+if __name__ == "__main__":
+    client = GameClient()
+    gui = PlayerGUI(client)
+   
     movement_commands = {
-                    'w':'MOVE_UP',
-                    's':'MOVE_DOWN', 
-                    'a':'MOVE_LEFT',
-                    'd':'MOVE_RIGHT'
-                }    
-    try:
-        client_socket.connect((ip,port))
+            'w': 'MOVE_UP',
+            's': 'MOVE_DOWN', 
+            'a': 'MOVE_LEFT',
+            'd': 'MOVE_RIGHT'
+        }
+
+    
+    # Get connected for free
+    string = input("Enter IP:PORT (Press Enter For Default): ")
+    if string == '':
+        ip, port = 'localhost', 8888
+    else:
+        ip, port = string.split(':')
+        port = int(port)
+    
+    if client.connect(ip, port):
+        # Start the game loop here
+        print("Connected successfully!")
         
-        # Receive initial prompt using protocol
-        data = client_socket.recv(1024).decode()
-        messages = parse_protocol_message(data)
-        
-        for msg in messages:
-            if msg['type'] == 'PROMPT':
-                print(f"Server: {msg['data']}")
-        
-        # Respond "no" to identify as player
-        client_socket.send(b"no\n")
+        threading.Thread(target=listen_to_server, args=(client,), daemon=True).start()
         
         while True:
-            clear_terminal()
-            # Receive Data from Server
-            data = client_socket.recv(4096).decode()
-            if not data:
-                print("Server Disconnected")
+            command = input("")
+            if command.lower() == 'quit':
+               break
+            
+            if command in movement_commands:
+               command = movement_commands[command]
+               
+            client.socket.send(command.encode())
+        '''     
+            data = client.socket.recv(4096).decode('utf-8')
+            message = client.print_from_server(data)
+            command = input(">>")
+            if command == "quit":
                 break
-            
-            # Parse and display protocol messages
-            messages = parse_protocol_message(data)
-            waiting_for_input = False
-            
-            for msg in messages:
-                display_protocol_message(msg)
-                if msg['type'] == 'PROMPT':
-                    waiting_for_input = True
-            
-            # Provide input on server prompt
-            if waiting_for_input:
-                user_input = input().strip()
-                if user_input in ['w','a','s','d']:
-                    command = movement_commands[user_input]
-                    client_socket.send(f"{command}\n".encode())
-                elif user_input.upper() == "POSITIONS":
-                    # POSITIONS command is now handled by the protocol
-                    client_socket.send(f"POSITIONS\n".encode())
-                else:
-                    command = user_input
-                    client_socket.send(f"{command}\n".encode())
-                    
-    except Exception as e:
-        print(f"Connection error: {e}")
-    finally:
-        client_socket.close()
-
-"""Starting the Server Here"""
-if __name__ == "__main__":
-    string = input("Enter IP:PORT(Press Enter for Default): ")
-    if string == '':
-        ip = 'localhost'
-        port = 8888
+            if not command:
+                client.clear_terminal()
+                command = "UPDATE"
+            client.socket.send(command.encode())
+        '''
     else:
-        ip_full = string.split(':')
-        ip = ip_full[0]
-        port = int(ip_full[1])  # Fixed: convert port to integer
-    start_client(ip, port)
+        print("Failed to connect")
+            
